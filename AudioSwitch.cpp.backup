@@ -1,0 +1,155 @@
+/*
+ * AudioSwitch.cpp
+ * 
+ * Implementation of audio source switching and mixing for ESP32
+ */
+
+#include "AudioSwitch.h"
+
+// Constructor\r\nAudioSwitch::AudioSwitch() :\r\n  _currentSource(SOURCE_NONE),\r\n  _bluetoothEnabled(true),    // Bluetooth enabled by default\r\n  _toneGeneratorEnabled(false), // Tone generator disabled by default\r\n  _auxInputEnabled(false),    // Aux input disabled by default\r\n  _bluetoothConnected(false)\r\n{\r\n}
+
+// Initialize the audio switch\r\nvoid AudioSwitch::begin() {\r\n  // Don't change the current source here - it should be set by loadSettings()\r\n  // If no source is set, default to NONE and let the rules apply\r\n  if (_currentSource == SOURCE_NONE) {\r\n    updateActiveSource();\r\n  }\r\n}
+
+// Set the active audio source
+void AudioSwitch::setSource(AudioInputSource source) {
+  // Only set the source if it's enabled
+  switch (source) {
+    case SOURCE_BLUETOOTH:
+      if (_bluetoothEnabled) {
+        _currentSource = source;
+      }
+      break;
+      
+    case SOURCE_TONE_GENERATOR:
+      if (_toneGeneratorEnabled) {
+        _currentSource = source;
+      }
+      break;
+      
+    case SOURCE_AUX_INPUT:
+      if (_auxInputEnabled) {
+        _currentSource = source;
+      }
+      break;
+      
+    case SOURCE_NONE:
+      _currentSource = SOURCE_NONE;
+      break;
+      
+    default:
+      // Unsupported source
+      break;
+  }
+}
+
+// Enable/disable Bluetooth
+void AudioSwitch::enableBluetooth(bool enable) {
+  _bluetoothEnabled = enable;
+  updateActiveSource();
+}
+
+// Enable/disable Tone Generator
+void AudioSwitch::enableToneGenerator(bool enable) {
+  _toneGeneratorEnabled = enable;
+  updateActiveSource();
+}
+
+// Enable/disable Aux Input
+void AudioSwitch::enableAuxInput(bool enable) {
+  _auxInputEnabled = enable;
+  updateActiveSource();
+}
+
+// Update Bluetooth connection status
+void AudioSwitch::updateBluetoothConnected(bool connected) {
+  _bluetoothConnected = connected;
+  updateActiveSource();
+}
+
+// Apply switching rules based on boolean logic
+AudioInputSource AudioSwitch::applyRules() {
+  // Priority order: Tone Generator > Aux Input > Bluetooth
+  
+  // Rule 1: If tone generator is enabled, use it
+  if (_toneGeneratorEnabled) {
+    return SOURCE_TONE_GENERATOR;
+  }
+  
+  // Rule 2: If aux input is enabled, use it
+  if (_auxInputEnabled) {
+    return SOURCE_AUX_INPUT;
+  }
+  
+  // Rule 3: If Bluetooth is enabled and connected, use it
+  if (_bluetoothEnabled && _bluetoothConnected) {
+    return SOURCE_BLUETOOTH;
+  }
+  
+  // Default: No source
+  return SOURCE_NONE;
+}
+
+// Parse command string and set source accordingly
+bool AudioSwitch::parseCommand(const String& command) {
+  if (command == "source:bt") {
+    setSource(SOURCE_BLUETOOTH);
+    return true;
+  }
+  else if (command == "source:tone") {
+    setSource(SOURCE_TONE_GENERATOR);
+    return true;
+  }
+  else if (command == "source:aux") {
+    setSource(SOURCE_AUX_INPUT);
+    return true;
+  }
+  else if (command == "source:none") {
+    setSource(SOURCE_NONE);
+    return true;
+  }
+  else if (command == "enable:bt") {
+    enableBluetooth(true);
+    return true;
+  }
+  else if (command == "disable:bt") {
+    enableBluetooth(false);
+    return true;
+  }
+  else if (command == "enable:tone") {
+    enableToneGenerator(true);
+    return true;
+  }
+  else if (command == "disable:tone") {
+    enableToneGenerator(false);
+    return true;
+  }
+  else if (command == "enable:aux") {
+    enableAuxInput(true);
+    return true;
+  }
+  else if (command == "disable:aux") {
+    enableAuxInput(false);
+    return true;
+  }
+  
+  return false; // Command not recognized
+}
+
+// Helper method: Update active source based on enabled sources
+void AudioSwitch::updateActiveSource() {
+  // Apply rules to determine the new active source
+  AudioInputSource newSource = applyRules();
+  
+  // Update the current source if it changed
+  if (newSource != _currentSource) {
+    _currentSource = newSource;
+  }
+}
+
+
+
+
+// Set the active audio source directly (for restoring from preferences)
+void AudioSwitch::setSourceDirect(AudioInputSource source) {
+  _currentSource = source;
+}
